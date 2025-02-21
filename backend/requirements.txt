@@ -1,0 +1,7 @@
+flask==2.3.3
+flask-cors==4.0.0
+torch==2.2.1
+pandas==2.2.0
+numpy==1.26.3
+yfinance==0.2.36
+scikit-learn==1.4.0
