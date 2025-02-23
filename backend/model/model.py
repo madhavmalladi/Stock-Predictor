@@ -27,8 +27,8 @@ class StockDataPreprocessor:
         delta = df['Close'].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        relative_strength = gain/loss
-        df['RSI'] = 100 - (100 / (1 + relative_strength))
+        relativeStrength = gain/loss
+        df['RSI'] = 100 - (100 / (1 + relativeStrength))
 
         df['BB_middle'] = df['Close'].rolling(window=20).mean()
         df['BB_upper'] = df['BB_middle'] + 2*df['Close'].rolling(window=20).std()
@@ -47,13 +47,13 @@ class StockDataPreprocessor:
         ]
     
         data = df[features].dropna()
-        scaled_data = self.scaler.fit_transform(data)
+        scaledData = self.scaler.fit_transform(data)
 
         X = []
         y = []
-        for i in range(len(scaled_data) - self.sequence_length):
-            X.append(scaled_data[i:(i + self.sequence_length)])
-            y.append(scaled_data[i + self.sequence_length, 0])
+        for i in range(len(scaledData) - self.sequence_length):
+            X.append(scaledData[i:(i + self.sequence_length)])
+            y.append(scaledData[i + self.sequence_length, 0])
 
         return np.array(X), np.array(y), df['Close'][-1]
 
@@ -109,9 +109,9 @@ class StockPredictor:
     
     @classmethod
     def load(cls, filepath):
-        loaded_model = tf.keras.models.load_model(filepath)
-        instance = cls(input_shape=loaded_model.input_shape[1:])
-        instance.model = loaded_model
+        loadedModel = tf.keras.models.load_model(filepath)
+        instance = cls(input_shape=loadedModel.input_shape[1:])
+        instance.model = loadedModel
         return instance
 
 def predict_stock_price(ticker, model, preprocessor):
@@ -119,16 +119,16 @@ def predict_stock_price(ticker, model, preprocessor):
         X, _, last_price = preprocessor.prepare_data(ticker)
         last_sequence = X[-1:]
         
-        predicted_scaled = model.predict(last_sequence)
-        predicted_price = preprocessor.scaler.inverse_transform(
-            predicted_scaled.reshape(-1, 1)
+        predictedScaled = model.predict(last_sequence)
+        predictedPrice = preprocessor.scaler.inverse_transform(
+            predictedScaled.reshape(-1, 1)
         )[0][0]
         
         return {
             'ticker': ticker,
             'last_price': float(last_price),
-            'predicted_price': float(predicted_price),
-            'predicted_change': float((predicted_price - last_price) / last_price * 100)
+            'predicted_price': float(predictedPrice),
+            'predicted_change': float((predictedPrice - last_price) / last_price * 100)
         }
     
     except Exception as e:
