@@ -1,5 +1,6 @@
-import torch
-import torch.nn as nn
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -54,55 +55,73 @@ class StockDataPreprocessor:
             X.append(scaled_data[i:(i + self.sequence_length)])
             y.append(scaled_data[i + self.sequence_length, 0])
 
-        return torch.FloatTensor(X), torch.FloatTensor(y), df['Close'][-1]
+        return np.array(X), np.array(y), df['Close'][-1]
 
-class StockPredictor(nn.Module):
-    def __init__(self, input_size=12, hidden_size=128, num_layers=2, dropout=0.2):
-        super(StockPredictor, self).__init__()
-
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-
-        self.lstm = nn.LSTM(
-            input_size=input_size,
-            hidden_size=hidden_size,
-            num_layers=num_layers,
-            batch_first=True,
-            dropout=dropout
+class StockPredictor:
+    def __init__(self, input_shape=(20, 12), units=128):
+        self.model = self._build_model(input_shape, units)
+        
+    def _build_model(self, input_shape, units):
+        model = Sequential([
+            LSTM(units=units, 
+                 return_sequences=True, 
+                 input_shape=input_shape),
+            Dropout(0.2),
+            
+            LSTM(units=units//2, 
+                 return_sequences=False),
+            Dropout(0.2),
+            
+            Dense(64, activation='relu'),
+            Dropout(0.2),
+            Dense(32, activation='relu'),
+            Dense(1)
+        ])
+        
+        model.compile(
+            optimizer='adam',
+            loss='mse',
+            metrics=['mae']
         )
-
-        self.dropout = nn.Dropout(dropout)
-        self.fc1 = nn.Linear(hidden_size, 64)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(64, 32)
-        self.fc3 = nn.Linear(32, 1)
+        
+        return model
     
-    def forward(self, x):
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-
-        lstm_out, _ = self.lstm(x, (h0, c0))
-        last_time_step = lstm_out[:, -1, :]
-        out = self.fc1(last_time_step)
-        out = self.relu(out)
-        out = self.dropout(out)
-        out = self.fc2(out)
-        out = self.relu(out)
-        out = self.dropout(out)
-        out = self.fc3(out)
-
-        return out
+    def fit(self, X, y, epochs=50, batch_size=32, validation_split=0.2):
+        return self.model.fit(
+            X, y,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_split=validation_split,
+            callbacks=[
+                tf.keras.callbacks.EarlyStopping(
+                    monitor='val_loss',
+                    patience=10,
+                    restore_best_weights=True
+                )
+            ]
+        )
     
+    def predict(self, X):
+        return self.model.predict(X)
+    
+    def save(self, filepath):
+        self.model.save(filepath)
+    
+    @classmethod
+    def load(cls, filepath):
+        loaded_model = tf.keras.models.load_model(filepath)
+        instance = cls(input_shape=loaded_model.input_shape[1:])
+        instance.model = loaded_model
+        return instance
+
 def predict_stock_price(ticker, model, preprocessor):
     try:
         X, _, last_price = preprocessor.prepare_data(ticker)
-        last_sequence = X[-1].unsqueeze(0)
-        model.eval()
-        with torch.no_grad():
-            predicted_scaled = model(last_sequence)
+        last_sequence = X[-1:]
         
+        predicted_scaled = model.predict(last_sequence)
         predicted_price = preprocessor.scaler.inverse_transform(
-            predicted_scaled.cpu().numpy().reshape(-1, 1)
+            predicted_scaled.reshape(-1, 1)
         )[0][0]
         
         return {

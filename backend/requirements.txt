@@ -1,6 +1,6 @@
-flask==2.3.3
+flask==2.2.5
 flask-cors==4.0.0
-torch==2.2.1
+tensorflow-macos==2.16.1
 pandas==2.2.0
 numpy==1.26.3
 yfinance==0.2.36
