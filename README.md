@@ -1,5 +1,3 @@
-In progress: Full-Stack Web Application to Predict Stocks
-
 ## Tech Stack
 
 - **Backend**: Flask
@@ -7,4 +5,5 @@ In progress: Full-Stack Web Application to Predict Stocks
 - **ML Framework**: TensorFlow
 - **Stock Data**: yfinance
 
+Photo of example usage:
 ![Alternate Image](Example.png)
