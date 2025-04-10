@@ -86,12 +86,13 @@ class StockPredictor:
         
         return model
     
-    def fit(self, X, y, epochs=50, batch_size=32, validation_split=0.2):
+    def fit(self, X, y, epochs=50, batch_size=32, validation_split=0.2, verbose=1):
         return self.model.fit(
             X, y,
             epochs=epochs,
             batch_size=batch_size,
             validation_split=validation_split,
+            verbose=verbose,
             callbacks=[
                 tf.keras.callbacks.EarlyStopping(
                     monitor='val_loss',
