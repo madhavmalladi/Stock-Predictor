@@ -5,5 +5,3 @@
 - **ML Framework**: TensorFlow
 - **Stock Data**: yfinance
 
-Photo of example usage:
-![Alternate Image](Example.png)
